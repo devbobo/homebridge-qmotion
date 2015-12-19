@@ -32,7 +32,7 @@ QMotionPlatform.prototype = {
             client.on("found", function(device) {
                 QSync = device;
     
-                for (i = 0; i < device.blinds.length - 1 ; i++) {
+                for (i = 0; i < device.blinds.length; i++) {
                     var accessory = new QMotionBlindAccessory(that.log, device.blinds[i]);
                     foundAccessories.push(accessory);
                 }
