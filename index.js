@@ -1,8 +1,6 @@
 var QMotion = require('qmotion');
 var sleep = require('sleep');
 
-var QSync;
-
 function QMotionPlatform(log, config) {
     this.addr = config["addr"];
     this.log = log;
@@ -16,7 +14,7 @@ QMotionPlatform.prototype = {
         var foundAccessories = [];
         
         if (this.addr != undefined) {
-            QSync = new QMotion(this.addr);
+            var QSync = new QMotion(this.addr);
 
             QSync.on("initialized", function(blinds) {
                 for (var key in blinds) {
@@ -30,8 +28,6 @@ QMotionPlatform.prototype = {
             var client = QMotion.search();
     
             client.on("found", function(device) {
-                QSync = device;
-    
                 for (i = 0; i < device.blinds.length; i++) {
                     var accessory = new QMotionBlindAccessory(that.log, device.blinds[i]);
                     foundAccessories.push(accessory);
@@ -48,21 +44,21 @@ QMotionPlatform.prototype = {
 }
 
 function QMotionBlindAccessory(log, blind) {
-    // device info
-    this.name = blind.name;
-    this.deviceId = blind.addr;
-    this.targetPosition = 0;
+    this.blind = blind;
     this.log = log;
 
-    log(this.name + " [" + this.deviceId + "]");
+    this.name = blind.name;
+
+    this.currentPosition = 0;
+    this.targetPosition = 0;
+    this.state = Characteristic.PositionState.STOPPED;
+
+    log(this.name + " [" + this.blind.addr + "]");
 }
 
 QMotionBlindAccessory.prototype = {
-    getTargetPosition: function(callback) {
-        callback(null, this.targetPosition);
-    },
     identify: function(callback) {
-        QSync.identify(this.deviceId, this.targetPosition, function() {
+        this.blind.identify(this.targetPosition, function() {
             callback();
         });
     },
@@ -71,14 +67,14 @@ QMotionBlindAccessory.prototype = {
 
         this.log("Setting target position: " + value);
 
-        QSync.move(that.deviceId, value, function(position) {
-	        if (position == null) {
+        this.blind.move(value, function(position) {
+            if (position == null) {
                 callback(new Error("Invalid Target Position"), false);
                 return;
             }
 
             // send the command twice in case the blind was already moving
-            QSync.move(that.deviceId, value, function(position) {
+            that.blind.move(value, function(position) {
                 that.targetPosition = position;
                 callback();
             });
@@ -86,26 +82,26 @@ QMotionBlindAccessory.prototype = {
     },
     getServices: function() {
         var that = this;
-        var services = []
-        var service = new Service.WindowCovering(this.name);
+        var services = [];
+
+        this.service = new Service.WindowCovering(this.name);
 
         // TODO: add CurrentPosition
-        //service
-        //.addCharacteristic(Characteristic.CurrentPosition);
+        this.service
+            .getCharacteristic(Characteristic.CurrentPosition);
 
-        service
-        .getCharacteristic(Characteristic.TargetPosition)
-        .setProps({ minStep: 25 })
-        .on('get', function(callback) {that.getTargetPosition(callback)})
-        .on('set', function(value, callback) {that.setTargetPosition(value, callback)});
+        this.service.getCharacteristic(Characteristic.TargetPosition)
+            .setProps({ minStep: 25 })
+            .on('get', function(callback) {callback(null, that.targetPosition)})
+            .on('set', function(value, callback) {that.setTargetPosition(value, callback)});
 
         // TODO: add PositionState
-        //service
-        //.addCharacteristic(Characteristic.PositionState);
+        this.service
+            .getCharacteristic(Characteristic.PositionState);
 
-        services.push(service);
+        services.push(this.service);
 
-        service = new Service.AccessoryInformation();
+        var service = new Service.AccessoryInformation();
         service.setCharacteristic(Characteristic.Manufacturer, "QMotion");
         services.push(service);
 
