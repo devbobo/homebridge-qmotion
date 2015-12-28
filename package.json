@@ -27,7 +27,7 @@
         "blinds"
     ],
     "dependencies": {
-        "qmotion": "*",
+        "qmotion": ">=0.0.4",
         "sleep": "*"
     }
 }

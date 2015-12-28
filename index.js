@@ -10,15 +10,15 @@ QMotionPlatform.prototype = {
     accessories: function(callback) {
         this.log("Fetching QMotion devices.");
 
-        var that = this;
+        var self = this;
         var foundAccessories = [];
         
         if (this.addr != undefined) {
             var QSync = new QMotion(this.addr);
 
             QSync.on("initialized", function(blinds) {
-                for (var key in blinds) {
-                    var accessory = new QMotionBlindAccessory(that.log, blinds[key]);
+                for (var i in blinds) {
+                    var accessory = new QMotionBlindAccessory(self.log, blinds[i]);
                     foundAccessories.push(accessory);
                 }
                 callback(foundAccessories);
@@ -28,8 +28,8 @@ QMotionPlatform.prototype = {
             var client = QMotion.search();
     
             client.on("found", function(device) {
-                for (i = 0; i < device.blinds.length; i++) {
-                    var accessory = new QMotionBlindAccessory(that.log, device.blinds[i]);
+                for (var i in device.blinds) {
+                    var accessory = new QMotionBlindAccessory(self.log, device.blinds[i]);
                     foundAccessories.push(accessory);
                 }
                 
@@ -44,26 +44,32 @@ QMotionPlatform.prototype = {
 }
 
 function QMotionBlindAccessory(log, blind) {
+    var self = this;
+
     this.blind = blind;
     this.log = log;
 
     this.name = blind.name;
 
-    this.currentPosition = 0;
-    this.targetPosition = 0;
-    this.state = Characteristic.PositionState.STOPPED;
-
     log(this.name + " [" + this.blind.addr + "]");
+
+    this.blind.on('currentPosition', function(blind){
+        self.service.getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
+    });
+
+    this.blind.on('positionState', function(blind){
+        self.service.getCharacteristic(Characteristic.PositionState).setValue(blind.positionState);
+    });
 }
 
 QMotionBlindAccessory.prototype = {
     identify: function(callback) {
-        this.blind.identify(this.targetPosition, function() {
+        this.blind.identify(this.blind.state.targetPosition, function() {
             callback();
         });
     },
     setTargetPosition: function(value, callback){
-        var that = this;
+        var self = this;
 
         this.log("Setting target position: " + value);
 
@@ -74,30 +80,29 @@ QMotionBlindAccessory.prototype = {
             }
 
             // send the command twice in case the blind was already moving
-            that.blind.move(value, function(position) {
-                that.targetPosition = position;
+            self.blind.move(value, function(position) {
                 callback();
             });
         });
     },
     getServices: function() {
-        var that = this;
+        var self = this;
         var services = [];
 
         this.service = new Service.WindowCovering(this.name);
 
-        // TODO: add CurrentPosition
-        this.service
-            .getCharacteristic(Characteristic.CurrentPosition);
+        this.service.getCharacteristic(Characteristic.CurrentPosition)
+            .on('get', function(callback) {callback(null, self.blind.state.currentPosition)})
+            .setValue(this.blind.state.currentPosition);
 
         this.service.getCharacteristic(Characteristic.TargetPosition)
             .setProps({ minStep: 25 })
-            .on('get', function(callback) {callback(null, that.targetPosition)})
-            .on('set', function(value, callback) {that.setTargetPosition(value, callback)});
+            .on('get', function(callback) {callback(null, self.blind.state.targetPosition)})
+            .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
 
-        // TODO: add PositionState
-        this.service
-            .getCharacteristic(Characteristic.PositionState);
+        this.service.getCharacteristic(Characteristic.PositionState)
+            .on('get', function(callback) {callback(null, self.blind.positionState)})
+            .setValue(this.blind.state.positionState);
 
         services.push(this.service);
 
