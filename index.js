@@ -58,7 +58,7 @@ function QMotionBlindAccessory(log, blind) {
     });
 
     this.blind.on('positionState', function(blind){
-        self.service.getCharacteristic(Characteristic.PositionState).setValue(blind.positionState);
+        self.service.getCharacteristic(Characteristic.PositionState).setValue(blind.state.positionState);
     });
 }
 
@@ -101,7 +101,7 @@ QMotionBlindAccessory.prototype = {
             .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
 
         this.service.getCharacteristic(Characteristic.PositionState)
-            .on('get', function(callback) {callback(null, self.blind.positionState)})
+            .on('get', function(callback) {callback(null, self.blind.state.positionState)})
             .setValue(this.blind.state.positionState);
 
         services.push(this.service);
