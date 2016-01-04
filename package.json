@@ -1,7 +1,7 @@
 {
     "name": "homebridge-qmotion",
     "version": "0.0.4",
-    "description": "QMotion plugin for homebridge: https://github.com/nfarina/homebridge",
+    "description": "QMotion platform plugin for Homebridge: https://github.com/nfarina/homebridge",
     "homepage": "https://github.com/devbobo/homebridge-qmotion#readme",
     "repository": {
         "type": "git",
