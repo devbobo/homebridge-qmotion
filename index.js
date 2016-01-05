@@ -1,6 +1,15 @@
 var QMotion = require('qmotion');
 var sleep = require('sleep');
 
+var Characteristic, Service;
+
+module.exports = function(homebridge) {
+    Service = homebridge.hap.Service;
+    Characteristic = homebridge.hap.Characteristic;
+
+    homebridge.registerPlatform("homebridge-qmotion", "QMotion", QMotionPlatform);
+};
+
 function QMotionPlatform(log, config) {
     this.addr = config["addr"];
     this.log = log;
@@ -71,7 +80,7 @@ QMotionBlindAccessory.prototype = {
     setTargetPosition: function(value, callback){
         var self = this;
 
-        this.log("Setting target position: " + value);
+        this.log("%s - Setting target position: %s", this.name, value);
 
         this.blind.move(value, function(position) {
             if (position == null) {
@@ -113,16 +122,3 @@ QMotionBlindAccessory.prototype = {
         return services;
     }
 }
-
-module.exports.accessory = QMotionBlindAccessory;
-module.exports.platform = QMotionPlatform;
-
-var Service, Characteristic;
-
-module.exports = function(homebridge) {
-    Service = homebridge.hap.Service;
-    Characteristic = homebridge.hap.Characteristic;
-    
-    homebridge.registerAccessory("homebridge-qmotion-blind", "QMotionBlind", QMotionBlindAccessory);
-    homebridge.registerPlatform("homebridge-qmotion", "QMotion", QMotionPlatform);
-};
