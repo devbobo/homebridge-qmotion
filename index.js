@@ -1,5 +1,4 @@
 var QMotion = require('qmotion');
-var sleep = require('sleep');
 
 var Characteristic, Service;
 
