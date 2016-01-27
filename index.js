@@ -59,7 +59,7 @@ function QMotionBlindAccessory(log, blind) {
 
     this.name = blind.name;
 
-    log(this.name + " [" + this.blind.addr + "]");
+    this.log("Found: %s [%s]", this.name, this.blind.addr);
 
     this.blind.on('currentPosition', function(blind){
         self.service.getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
@@ -72,6 +72,7 @@ function QMotionBlindAccessory(log, blind) {
 
 QMotionBlindAccessory.prototype = {
     identify: function(callback) {
+        this.log("Identify: %s [%s]", this.name, this.blind.addr);
         this.blind.identify(this.blind.state.targetPosition, function() {
             callback();
         });
