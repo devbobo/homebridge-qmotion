@@ -20,7 +20,7 @@ QMotionPlatform.prototype = {
 
         var self = this;
         var foundAccessories = [];
-        
+
         if (this.addr != undefined) {
             var QSync = new QMotion(this.addr);
 
@@ -34,7 +34,7 @@ QMotionPlatform.prototype = {
         }
         else {
             var client = QMotion.search();
-    
+
             client.on("found", function(device) {
                 for (var i in device.blinds) {
                     var accessory = new QMotionBlindAccessory(self.log, device.blinds[i]);
@@ -43,7 +43,7 @@ QMotionPlatform.prototype = {
                 
                 callback(foundAccessories);
             });
-            
+
             client.on("timeout", function() {
                 callback(foundAccessories);
             });
