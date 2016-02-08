@@ -24,11 +24,12 @@ QMotionPlatform.prototype = {
         if (this.addr != undefined) {
             var QSync = new QMotion(this.addr);
 
-            QSync.on("initialized", function(blinds) {
-                for (var i in blinds) {
-                    var accessory = new QMotionBlindAccessory(self.log, blinds[i]);
-                    foundAccessories.push(accessory);
-                }
+            QSync.on("blind", function(blind) {
+                var accessory = new QMotionBlindAccessory(self.log, blind);
+                foundAccessories.push(accessory);
+            });
+
+            QSync.on("initialized", function() {
                 callback(foundAccessories);
             });
         }
@@ -36,12 +37,14 @@ QMotionPlatform.prototype = {
             var client = QMotion.search();
 
             client.on("found", function(device) {
-                for (var i in device.blinds) {
-                    var accessory = new QMotionBlindAccessory(self.log, device.blinds[i]);
+                device.on("blind", function(blind) {
+                    var accessory = new QMotionBlindAccessory(self.log, blind);
                     foundAccessories.push(accessory);
-                }
+                });
                 
-                callback(foundAccessories);
+                device.on("initialized", function() {
+                    callback(foundAccessories);
+                });
             });
 
             client.on("timeout", function() {
@@ -62,6 +65,7 @@ function QMotionBlindAccessory(log, blind) {
     this.log("Found: %s [%s]", this.name, this.blind.addr);
 
     this.blind.on('currentPosition', function(blind){
+        console.log("currentPosition", blind.state.currentPosition);
         self.service.getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
     });
 
