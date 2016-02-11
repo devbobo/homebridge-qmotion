@@ -54,6 +54,16 @@ QMotionPlatform.prototype.configureAccessory = function(accessory) {
     this.accessories[accessory.UUID] = accessory;
 }
 
+QMotionPlatform.prototype.removeAccessory = function(accessory) {
+    this.log("Remove: %s", accessory.displayName);
+
+    if (this.accessories[accessory.UUID]) {
+        delete this.accessories[accessory.UUID];
+    }
+
+    this.api.unregisterPlatformAccessories("homebridge-qmotion", "QMotion", [accessory]);
+}
+
 function QMotionAccessory(log, accessory, blind) {
     var self = this;
 
