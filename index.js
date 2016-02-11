@@ -72,7 +72,6 @@ function QMotionAccessory(log, accessory, blind) {
     this.log = log;
 
     this.blind.on('currentPosition', function(blind){
-        console.log("currentPosition", blind.state.currentPosition);
         accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
     });
 
