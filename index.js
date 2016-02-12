@@ -1,4 +1,5 @@
 var QMotion = require('qmotion');
+var http = require('http');
 
 var Characteristic, PlatformAccessory, Service, UUIDGen;
 
@@ -20,6 +21,11 @@ function QMotionPlatform(log, config, api) {
     this.api = api;
     this.accessories = {};
     this.log = log;
+
+    this.requestServer = http.createServer();
+    this.requestServer.listen(18092, function() {
+        self.log("Server Listening...");
+    });
 
     this.api.on('didFinishLaunching', function() {
         var client = QMotion.search();
@@ -53,6 +59,48 @@ QMotionPlatform.prototype.addAccessory = function(blind) {
 
 QMotionPlatform.prototype.configureAccessory = function(accessory) {
     this.accessories[accessory.UUID] = accessory;
+}
+
+QMotionPlatform.prototype.configurationRequestHandler = function(context, request, callback) {
+    var respDict = {};
+
+    if (request && request.response) {
+        if (request.response.selections) {
+            switch(context.onScreen) {
+                case "Remove":
+                    for (var i in request.response.selections.sort()) {
+                        this.removeAccessory(this.sortedAccessories[request.response.selections[i]]);
+                    }
+
+                    this.sortedAccessories = null;
+
+                    respDict = {
+                        "type": "Interface",
+                        "interface": "instruction",
+                        "title": "Finished",
+                        "detail": "Accessory removal was successful."
+                    }
+
+                    break;
+            }
+        }
+    }
+    else {
+        this.sortedAccessories = Object.keys(this.accessories).map(function(k){return this[k] instanceof QMotionAccessory ? this[k].accessory : this[k]}, this.accessories).sort(compare);
+        var names = Object.keys(this.sortedAccessories).map(function(k) {return this[k].displayName}, this.sortedAccessories);
+
+        respDict = {
+            "type": "Interface",
+            "interface": "list",
+            "title": "Select accessory to remove",
+            "allowMultipleSelection": true,
+            "items": names
+        }
+
+        context.onScreen = "Remove";
+    }
+
+    callback(respDict);
 }
 
 QMotionPlatform.prototype.removeAccessory = function(accessory) {
@@ -116,4 +164,16 @@ QMotionAccessory.prototype.setTargetPosition = function(value, callback){
             callback();
         });
     });
+}
+
+function compare(a,b) {
+    if (a.displayName < b.displayName) {
+        return -1;
+    }
+
+    if (a.displayName > b.displayName) {
+        return 1;
+    }
+
+    return 0;
 }
