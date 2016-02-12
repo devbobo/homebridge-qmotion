@@ -39,7 +39,7 @@ function QMotionPlatform(log, config, api) {
                     self.addAccessory(blind);
                 }
                 else {
-                    self.log("Found: %s [%s]", accessory.displayName, blind.addr);
+                    self.log("Online: %s [%s]", accessory.displayName, blind.addr);
                     self.accessories[uuid] = new QMotionAccessory(self.log, accessory, blind);
                 }
             });
