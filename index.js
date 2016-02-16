@@ -14,7 +14,7 @@ module.exports = function(homebridge) {
 };
 
 function QMotionPlatform(log, config, api) {
-    config = config || {};
+    this.config = config || {};
 
     var self = this;
 
@@ -81,7 +81,7 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
                         "detail": "Accessory removal was successful."
                     }
 
-                    break;
+                    callback(respDict, "platform", true, this.config);
             }
         }
     }
@@ -98,9 +98,8 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
         }
 
         context.onScreen = "Remove";
+        callback(respDict);
     }
-
-    callback(respDict);
 }
 
 QMotionPlatform.prototype.removeAccessory = function(accessory) {
