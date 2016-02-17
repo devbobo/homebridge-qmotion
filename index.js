@@ -1,178 +1,128 @@
 var QMotion = require('qmotion');
-var http = require('http');
 
-var Characteristic, PlatformAccessory, Service, UUIDGen;
+var Characteristic, Service;
 
 module.exports = function(homebridge) {
-    PlatformAccessory = homebridge.platformAccessory;
-
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
-    UUIDGen = homebridge.hap.uuid;
 
-    homebridge.registerPlatform("homebridge-qmotion", "QMotion", QMotionPlatform, true);
+    homebridge.registerPlatform("homebridge-qmotion", "QMotion", QMotionPlatform);
 };
 
-function QMotionPlatform(log, config, api) {
-    this.config = config || {};
-
-    var self = this;
-
-    this.api = api;
-    this.accessories = {};
+function QMotionPlatform(log, config) {
+    this.addr = config["addr"];
     this.log = log;
+}
 
-    this.requestServer = http.createServer();
-    this.requestServer.listen(18092, function() {
-        self.log("Server Listening...");
-    });
+QMotionPlatform.prototype = {
+    accessories: function(callback) {
+        this.log("Fetching QMotion devices.");
 
-    this.api.on('didFinishLaunching', function() {
-        var client = QMotion.search();
+        var self = this;
+        var foundAccessories = [];
 
-        client.on("found", function(device) {
-            device.on("blind", function(blind) {
-                var uuid = UUIDGen.generate(blind.addr);
-                var accessory = self.accessories[uuid];
+        if (this.addr != undefined) {
+            var QSync = new QMotion(this.addr);
 
-                if (accessory === undefined) {
-                    self.addAccessory(blind);
-                }
-                else {
-                    self.log("Online: %s [%s]", accessory.displayName, blind.addr);
-                    self.accessories[uuid] = new QMotionAccessory(self.log, accessory, blind);
-                }
+            QSync.on("blind", function(blind) {
+                var accessory = new QMotionBlindAccessory(self.log, blind);
+                foundAccessories.push(accessory);
             });
-        });
-    }.bind(this));
-}
 
-QMotionPlatform.prototype.addAccessory = function(blind) {
-    this.log("Found: %s [%s]", blind.name, blind.addr);
+            QSync.on("initialized", function() {
+                callback(foundAccessories);
+            });
+        }
+        else {
+            var client = QMotion.search();
 
-    var accessory = new PlatformAccessory(blind.name, UUIDGen.generate(blind.addr));
-    accessory.addService(Service.WindowCovering);
-    this.accessories[accessory.UUID] = new QMotionAccessory(this.log, accessory, blind);
+            client.on("found", function(device) {
+                device.on("blind", function(blind) {
+                    var accessory = new QMotionBlindAccessory(self.log, blind);
+                    foundAccessories.push(accessory);
+                });
+                
+                device.on("initialized", function() {
+                    callback(foundAccessories);
+                });
+            });
 
-    this.api.registerPlatformAccessories("homebridge-qmotion", "QMotion", [accessory]);
-}
-
-QMotionPlatform.prototype.configureAccessory = function(accessory) {
-    this.accessories[accessory.UUID] = accessory;
-}
-
-QMotionPlatform.prototype.configurationRequestHandler = function(context, request, callback) {
-    var respDict = {};
-
-    if (request && request.response) {
-        if (request.response.selections) {
-            switch(context.onScreen) {
-                case "Remove":
-                    for (var i in request.response.selections.sort()) {
-                        this.removeAccessory(this.sortedAccessories[request.response.selections[i]]);
-                    }
-
-                    this.sortedAccessories = null;
-
-                    respDict = {
-                        "type": "Interface",
-                        "interface": "instruction",
-                        "title": "Finished",
-                        "detail": "Accessory removal was successful."
-                    }
-
-                    callback(respDict, "platform", true, this.config);
-            }
+            client.on("timeout", function() {
+                callback(foundAccessories);
+            });
         }
     }
-    else {
-        this.sortedAccessories = Object.keys(this.accessories).map(function(k){return this[k] instanceof QMotionAccessory ? this[k].accessory : this[k]}, this.accessories).sort(compare);
-        var names = Object.keys(this.sortedAccessories).map(function(k) {return this[k].displayName}, this.sortedAccessories);
-
-        respDict = {
-            "type": "Interface",
-            "interface": "list",
-            "title": "Select accessory to remove",
-            "allowMultipleSelection": true,
-            "items": names
-        }
-
-        context.onScreen = "Remove";
-        callback(respDict);
-    }
 }
 
-QMotionPlatform.prototype.removeAccessory = function(accessory) {
-    this.log("Remove: %s", accessory.displayName);
-
-    if (this.accessories[accessory.UUID]) {
-        delete this.accessories[accessory.UUID];
-    }
-
-    this.api.unregisterPlatformAccessories("homebridge-qmotion", "QMotion", [accessory]);
-}
-
-function QMotionAccessory(log, accessory, blind) {
+function QMotionBlindAccessory(log, blind) {
     var self = this;
 
-    this.accessory = accessory;
     this.blind = blind;
     this.log = log;
 
+    this.name = blind.name;
+
+    this.log("Found: %s [%s]", this.name, this.blind.addr);
+
     this.blind.on('currentPosition', function(blind){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
+        console.log("currentPosition", blind.state.currentPosition);
+        self.service.getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
     });
 
     this.blind.on('positionState', function(blind){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.PositionState).setValue(blind.state.positionState);
+        self.service.getCharacteristic(Characteristic.PositionState).setValue(blind.state.positionState);
     });
-
-    var service = accessory.getService(Service.WindowCovering);
-
-    service
-        .getCharacteristic(Characteristic.CurrentPosition)
-        .on('get', function(callback) {callback(null, self.blind.state.currentPosition)})
-        .setValue(self.blind.state.currentPosition);
-
-    service
-        .getCharacteristic(Characteristic.TargetPosition)
-        .setProps({ minStep: 25 })
-        .on('get', function(callback) {callback(null, self.blind.state.targetPosition)})
-        .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
-
-    service.getCharacteristic(Characteristic.PositionState)
-        .on('get', function(callback) {callback(null, self.blind.state.positionState)})
-        .setValue(self.blind.state.positionState);
-
-    accessory.updateReachability(true);
 }
 
-QMotionAccessory.prototype.setTargetPosition = function(value, callback){
-    this.log("%s - Setting target position: %s", this.accessory.displayName, value);
-
-    var self = this;
-
-    this.blind.move(value, function(position) {
-        if (position == null) {
-            callback(new Error("Invalid Target Position"), false);
-            return;
-        }
-
-        // send the command twice in case the blind was already moving
-        self.blind.move(value, function(position) {
+QMotionBlindAccessory.prototype = {
+    identify: function(callback) {
+        this.log("Identify: %s [%s]", this.name, this.blind.addr);
+        this.blind.identify(this.blind.state.targetPosition, function() {
             callback();
         });
-    });
-}
+    },
+    setTargetPosition: function(value, callback){
+        var self = this;
 
-function compare(a,b) {
-    if (a.displayName < b.displayName) {
-        return -1;
+        this.log("%s - Setting target position: %s", this.name, value);
+
+        this.blind.move(value, function(position) {
+            if (position == null) {
+                callback(new Error("Invalid Target Position"), false);
+                return;
+            }
+
+            // send the command twice in case the blind was already moving
+            self.blind.move(value, function(position) {
+                callback();
+            });
+        });
+    },
+    getServices: function() {
+        var self = this;
+        var services = [];
+
+        this.service = new Service.WindowCovering(this.name);
+
+        this.service.getCharacteristic(Characteristic.CurrentPosition)
+            .on('get', function(callback) {callback(null, self.blind.state.currentPosition)})
+            .setValue(this.blind.state.currentPosition);
+
+        this.service.getCharacteristic(Characteristic.TargetPosition)
+            .setProps({ minStep: 25 })
+            .on('get', function(callback) {callback(null, self.blind.state.targetPosition)})
+            .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
+
+        this.service.getCharacteristic(Characteristic.PositionState)
+            .on('get', function(callback) {callback(null, self.blind.state.positionState)})
+            .setValue(this.blind.state.positionState);
+
+        services.push(this.service);
+
+        var service = new Service.AccessoryInformation();
+        service.setCharacteristic(Characteristic.Manufacturer, "QMotion");
+        services.push(service);
+
+        return services;
     }
-
-    if (a.displayName > b.displayName) {
-        return 1;
-    }
-
-    return 0;
 }
