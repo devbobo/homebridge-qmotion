@@ -64,6 +64,10 @@ QMotionPlatform.prototype.configureAccessory = function(accessory) {
 QMotionPlatform.prototype.configurationRequestHandler = function(context, request, callback) {
     var respDict = {};
 
+    if (request && request.type === "Terminate") {
+        context.onScreen = null;
+    }
+
     switch(context.onScreen) {
         case "Remove":
             if (request.response.selections) {
@@ -77,8 +81,7 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
                     "type": "Interface",
                     "interface": "instruction",
                     "title": "Finished",
-                    "detail": "Accessory removal was successful.",
-                    "showNextButton": true
+                    "detail": "Accessory removal was successful."
                 }
 
                 context.onScreen = "Complete";
@@ -87,7 +90,7 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
             }
         case "Complete":
         default:
-            if (request && request.response) {
+            if (request && (request.response || request.type === "Terminate")) {
                 context.onScreen = null;
                 callback(respDict, "platform", true, this.config);
             }
