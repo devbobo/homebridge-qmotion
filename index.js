@@ -68,14 +68,21 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
         context.onScreen = null;
     }
 
+    var sortAccessories = function() {
+        context.sortedAccessories = Object.keys(self.accessories).map(
+            function(k){return this[k] instanceof PlatformAccessory ? this[k] : this[k].accessory},
+            self.accessories
+        ).sort(function(a,b) {if (a.displayName < b.displayName) return -1; if (a.displayName > b.displayName) return 1; return 0});
+
+        return Object.keys(context.sortedAccessories).map(function(k) {return this[k].displayName}, context.sortedAccessories);
+    }
+
     switch(context.onScreen) {
-        case "Remove":
+        case "DoRemove":
             if (request.response.selections) {
                 for (var i in request.response.selections.sort()) {
-                    this.removeAccessory(this.sortedAccessories[request.response.selections[i]]);
+                    this.removeAccessory(context.sortedAccessories[request.response.selections[i]]);
                 }
-
-                this.sortedAccessories = null;
 
                 respDict = {
                     "type": "Interface",
@@ -86,31 +93,41 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
 
                 context.onScreen = "Complete";
                 callback(respDict);
-                break;
             }
-        case "Complete":
+            else {
+                context.onScreen = null;
+                callback(respDict, "platform", true, this.config);
+            }
+            break;
+        case "Menu":
+            context.onScreen = "Remove";
+        case "Remove":
+            respDict = {
+                "type": "Interface",
+                "interface": "list",
+                "title": "Select accessory to " + context.onScreen.toLowerCase(),
+                "allowMultipleSelection": context.onScreen == "Remove",
+                "items": sortAccessories()
+            }
+
+            context.onScreen = "Do" + context.onScreen;
+            callback(respDict);
+            break;
         default:
             if (request && (request.response || request.type === "Terminate")) {
                 context.onScreen = null;
                 callback(respDict, "platform", true, this.config);
             }
             else {
-                this.sortedAccessories = Object.keys(this.accessories).map(
-                    function(k){return this[k] instanceof PlatformAccessory ? this[k] : this[k].accessory},
-                    this.accessories
-                ).sort(function(a,b) {if (a.displayName < b.displayName) return -1; if (a.displayName > b.displayName) return 1; return 0});
-
-                var names = Object.keys(this.sortedAccessories).map(function(k) {return this[k].displayName}, this.sortedAccessories);
-
                 respDict = {
                     "type": "Interface",
                     "interface": "list",
-                    "title": "Select accessory to remove",
-                    "allowMultipleSelection": true,
-                    "items": names
+                    "title": "Select option",
+                    "allowMultipleSelection": false,
+                    "items": ["Remove Accessory"]
                 }
 
-                context.onScreen = "Remove";
+                context.onScreen = "Menu";
                 callback(respDict);
             }
     }
