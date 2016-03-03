@@ -23,6 +23,11 @@ function QMotionPlatform(log, config, api) {
     this.log = log;
 
     this.requestServer = http.createServer();
+
+    this.requestServer.on('error', function(err) {
+
+    });
+
     this.requestServer.listen(18092, function() {
         self.log("Server Listening...");
     });
@@ -149,6 +154,11 @@ function QMotionAccessory(log, accessory, blind) {
     this.accessory = accessory;
     this.blind = blind;
     this.log = log;
+
+    this.accessory.on('identify', function(paired, callback) {
+        self.log("%s - identify", self.accessory.displayName);
+        callback();
+    });
 
     this.blind.on('currentPosition', function(blind){
         accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
