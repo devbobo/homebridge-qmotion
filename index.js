@@ -45,7 +45,7 @@ function QMotionPlatform(log, config, api) {
                 }
                 else {
                     self.log("Online: %s [%s]", accessory.displayName, blind.addr);
-                    self.accessories[uuid] = new QMotionAccessory(self.log, accessory, blind);
+                    self.accessories[uuid] = new QMotionAccessory(self.log, (accessory instanceof QMotionAccessory ? accessory.accessory : accessory), blind);
                 }
             });
         });
@@ -55,8 +55,8 @@ function QMotionPlatform(log, config, api) {
 QMotionPlatform.prototype.addAccessory = function(blind) {
     this.log("Found: %s [%s]", blind.name, blind.addr);
 
-    var accessory = new PlatformAccessory(blind.name, UUIDGen.generate(blind.addr));
-    accessory.addService(Service.WindowCovering);
+    var accessory = new PlatformAccessory("QMotion " + blind.addr, UUIDGen.generate(blind.addr));
+    accessory.addService(Service.WindowCovering, blind.name);
     this.accessories[accessory.UUID] = new QMotionAccessory(this.log, accessory, blind);
 
     this.api.registerPlatformAccessories("homebridge-qmotion", "QMotion", [accessory]);
