@@ -177,18 +177,18 @@ function QMotionAccessory(log, accessory, blind) {
 
     service
         .getCharacteristic(Characteristic.TargetPosition)
-        .setProps({ minStep: 25 })
         .on('get', function(callback) {callback(null, self.blind.state.targetPosition)})
         .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
 
     service.getCharacteristic(Characteristic.PositionState)
+        .setProps({ minStep: 25 })
         .on('get', function(callback) {callback(null, self.blind.state.positionState)})
         .setValue(self.blind.state.positionState);
 
     accessory.updateReachability(true);
 }
 
-QMotionAccessory.prototype.setTargetPosition = function(value, callback){
+QMotionAccessory.prototype.setTargetPosition = function(value, callback) {
     this.log("%s - Setting target position: %s", this.accessory.displayName, value);
 
     var self = this;
