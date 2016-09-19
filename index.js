@@ -172,16 +172,19 @@ function QMotionAccessory(log, accessory, blind) {
 
     service
         .getCharacteristic(Characteristic.CurrentPosition)
+        .setProps({ minStep: 25 })
         .on('get', function(callback) {callback(null, self.blind.state.currentPosition)})
         .setValue(self.blind.state.currentPosition);
 
     service
         .getCharacteristic(Characteristic.TargetPosition)
+        .setProps({ minStep: 25 })
+        .setValue(self.blind.state.targetPosition)
         .on('get', function(callback) {callback(null, self.blind.state.targetPosition)})
         .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
 
     service.getCharacteristic(Characteristic.PositionState)
-        .setProps({ minStep: 25 })
+        .setProps({ minStep: null })
         .on('get', function(callback) {callback(null, self.blind.state.positionState)})
         .setValue(self.blind.state.positionState);
 
