@@ -1,5 +1,4 @@
 var QMotion = require('qmotion');
-var http = require('http');
 
 var Characteristic, PlatformAccessory, Service, UUIDGen;
 
@@ -21,16 +20,6 @@ function QMotionPlatform(log, config, api) {
     this.api = api;
     this.accessories = {};
     this.log = log;
-
-    this.requestServer = http.createServer();
-
-    this.requestServer.on('error', function(err) {
-
-    });
-
-    this.requestServer.listen(18092, function() {
-        self.log("Server Listening...");
-    });
 
     this.api.on('didFinishLaunching', function() {
         var client = QMotion.search();
