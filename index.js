@@ -194,7 +194,9 @@ QMotionAccessory.prototype.setTargetPosition = function(value, callback) {
 
         // send the command twice in case the blind was already moving
         setTimeout(function(self, position) {
-            self.blind.move(position);
+            if (position == self.blind.state.targetPosition) {
+                self.blind.move(position);
+            }
         }, 500, this, value);
 
         callback(null);
