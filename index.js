@@ -145,36 +145,37 @@ function QMotionAccessory(log, accessory, blind) {
     this.log = log;
 
     this.accessory.on('identify', function(paired, callback) {
-        self.log("%s - identify", self.accessory.displayName);
-        callback();
+        this.log("%s - identify", this.accessory.displayName);
+        this.blind.identify(callback);
+    }.bind(this));
+
+    this.blind.on('currentPosition', function(position){
+        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).setValue(position);
     });
 
-    this.blind.on('currentPosition', function(blind){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).setValue(blind.state.currentPosition);
+    this.blind.on('targetPosition', function(position){
+        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.TargetPosition).setValue(position);
     });
 
-    this.blind.on('positionState', function(blind){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.PositionState).setValue(blind.state.positionState);
+    this.blind.on('positionState', function(state){
+        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.PositionState).setValue(state);
     });
 
     var service = accessory.getService(Service.WindowCovering);
 
     service
         .getCharacteristic(Characteristic.CurrentPosition)
-        .setProps({ minStep: 25 })
-        .on('get', function(callback) {callback(null, self.blind.state.currentPosition)})
+        .setProps({ minStep: 12.5, format: Characteristic.Formats.FLOAT })
         .setValue(self.blind.state.currentPosition);
 
     service
         .getCharacteristic(Characteristic.TargetPosition)
-        .setProps({ minStep: 25 })
+        .setProps({ minStep: 12.5, format: Characteristic.Formats.FLOAT })
         .setValue(self.blind.state.targetPosition)
-        .on('get', function(callback) {callback(null, self.blind.state.targetPosition)})
         .on('set', function(value, callback) {self.setTargetPosition(value, callback)});
 
     service.getCharacteristic(Characteristic.PositionState)
         .setProps({ minStep: null })
-        .on('get', function(callback) {callback(null, self.blind.state.positionState)})
         .setValue(self.blind.state.positionState);
 
     accessory.updateReachability(true);
@@ -192,8 +193,10 @@ QMotionAccessory.prototype.setTargetPosition = function(value, callback) {
         }
 
         // send the command twice in case the blind was already moving
-        self.blind.move(value, function(position) {
-            callback();
-        });
+        setTimeout(function(self, position) {
+            self.blind.move(position);
+        }, 500, this, value);
+
+        callback(null);
     });
 }
