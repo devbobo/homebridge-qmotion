@@ -13,6 +13,12 @@ module.exports = function(homebridge) {
 };
 
 function QMotionPlatform(log, config, api) {
+    if (!config) {
+        log.warn("Ignoring QMotion Platform setup because it is not configured");
+        this.disabled = true;
+        return;
+    }
+
     this.config = config || {};
 
     var self = this;
@@ -149,16 +155,16 @@ function QMotionAccessory(log, accessory, blind) {
         this.blind.identify(callback);
     }.bind(this));
 
-    this.blind.on('currentPosition', function(position){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).setValue(position);
+    this.blind.on('currentPosition', function(position) {
+        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition).updateValue(position);
     });
 
-    this.blind.on('targetPosition', function(position){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.TargetPosition).setValue(position);
+    this.blind.on('targetPosition', function(position) {
+        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.TargetPosition).updateValue(position);
     });
 
-    this.blind.on('positionState', function(state){
-        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.PositionState).setValue(state);
+    this.blind.on('positionState', function(state) {
+        accessory.getService(Service.WindowCovering).getCharacteristic(Characteristic.PositionState).updateValue(state);
     });
 
     var service = accessory.getService(Service.WindowCovering);
@@ -177,8 +183,6 @@ function QMotionAccessory(log, accessory, blind) {
     service.getCharacteristic(Characteristic.PositionState)
         .setProps({ minStep: null })
         .setValue(self.blind.state.positionState);
-
-    accessory.updateReachability(true);
 }
 
 QMotionAccessory.prototype.setTargetPosition = function(value, callback) {
