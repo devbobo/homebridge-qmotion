@@ -69,13 +69,13 @@ QMotionPlatform.prototype.configurationRequestHandler = function(context, reques
     }
 
     var sortAccessories = function() {
-        context.sortedAccessories = Object.keys(self.accessories).map(
+        context.sortedAccessories = Object.keys(this.accessories).map(
             function(k){return this[k] instanceof PlatformAccessory ? this[k] : this[k].accessory},
-            self.accessories
+            this.accessories
         ).sort(function(a,b) {if (a.displayName < b.displayName) return -1; if (a.displayName > b.displayName) return 1; return 0});
 
         return Object.keys(context.sortedAccessories).map(function(k) {return this[k].displayName}, context.sortedAccessories);
-    }
+    }.bind(this);
 
     switch(context.onScreen) {
         case "DoRemove":

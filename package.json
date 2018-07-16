@@ -1,6 +1,6 @@
 {
     "name": "homebridge-qmotion",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "description": "QMotion platform plugin for Homebridge: https://github.com/nfarina/homebridge",
     "homepage": "https://github.com/devbobo/homebridge-qmotion#readme",
     "repository": {
@@ -27,6 +27,6 @@
         "blinds"
     ],
     "dependencies": {
-        "qmotion": ">=0.1.2"
+        "qmotion": ">=0.1.3"
     }
 }
